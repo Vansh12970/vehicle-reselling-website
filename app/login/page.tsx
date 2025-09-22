@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,37 +11,63 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { User, Shield, Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 
+// Firebase imports
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebase"
+
 export default function LoginPage() {
   const [userType, setUserType] = useState<"user" | "admin">("user")
+  const [email, setEmail] = useState("")
+  const [adminId, setAdminId] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false) // toggle register/login
   const router = useRouter()
+
+  const ADMIN_ID = process.env.NEXT_PUBLIC_ADMIN_ID
+  const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+
+  const handleUserRegister = async () => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password)
+      localStorage.setItem("isLoggedIn", "true")
+      localStorage.setItem("userType", "user")
+      router.push("/")
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || "Registration failed.")
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
-    // Simple password validation
-    const validPasswords = {
-      user: "user123",
-      admin: "admin123",
-    }
-
-    if (password === validPasswords[userType]) {
-      localStorage.setItem("isLoggedIn", "true")
-      localStorage.setItem("userType", userType)
-
-      // Redirect based on user type
-      if (userType === "admin") {
-        router.push("/sell")
+    try {
+      if (userType === "user") {
+        if (isRegistering) {
+          await handleUserRegister()
+        } else {
+          await signInWithEmailAndPassword(auth, email, password)
+          localStorage.setItem("isLoggedIn", "true")
+          localStorage.setItem("userType", "user")
+          router.push("/")
+        }
       } else {
-        router.push("/")
+        if (adminId === ADMIN_ID && password === ADMIN_PASSWORD) {
+          localStorage.setItem("isLoggedIn", "true")
+          localStorage.setItem("userType", "admin")
+          router.push("/sell")
+        } else {
+          setError("Invalid Admin credentials.")
+        }
       }
-    } else {
-      setError("Invalid password. Please try again.")
+    } catch (err) {
+      console.error(err)
+      setError("Login failed. Please check your credentials.")
     }
 
     setIsLoading(false)
@@ -62,8 +87,12 @@ export default function LoginPage() {
               />
             </div>
           </div>
-          <CardTitle className="thakur-branding text-primary">Login to Thakur Dealings</CardTitle>
-          <CardDescription>Choose your account type and enter your password</CardDescription>
+          <CardTitle className="thakur-branding text-primary">
+            {isRegistering ? "Register" : "Login"} to Thakur Dealings
+          </CardTitle>
+          <CardDescription>
+            Choose account type and {isRegistering ? "register" : "login"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
@@ -93,6 +122,37 @@ export default function LoginPage() {
               </RadioGroup>
             </div>
 
+            {/* User Email */}
+            {userType === "user" && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Admin ID */}
+            {userType === "admin" && (
+              <div className="space-y-2">
+                <Label htmlFor="adminId">Admin ID</Label>
+                <Input
+                  id="adminId"
+                  type="text"
+                  value={adminId}
+                  onChange={(e) => setAdminId(e.target.value)}
+                  placeholder="Enter Admin ID"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -101,7 +161,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={`Enter ${userType} password`}
+                  placeholder="Enter password"
                   required
                 />
                 <Button
@@ -114,14 +174,35 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <div className="text-xs text-muted-foreground">Demo passwords: User - "user123", Admin - "admin123" </div>
             </div>
 
+            {/* Error Message */}
             {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</div>}
 
+            {/* Submit */}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading
+                ? isRegistering
+                  ? "Registering..."
+                  : "Logging in..."
+                : isRegistering
+                ? "Register"
+                : "Login"}
             </Button>
+
+            {/* Toggle Login/Register */}
+            {userType === "user" && (
+              <div className="text-sm text-center mt-2">
+                {isRegistering ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button
+                  type="button"
+                  className="text-primary underline"
+                  onClick={() => setIsRegistering(!isRegistering)}
+                >
+                  {isRegistering ? "Login" : "Register"}
+                </button>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

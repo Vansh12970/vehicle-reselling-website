@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Heart, ChevronLeft, ChevronRight, Fuel, Calendar, Palette, MapPin, Trash2 } from "lucide-react"
+import { doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase"; // your Firebase Firestore instance
 
 interface Vehicle {
   id: string
@@ -76,11 +78,20 @@ const [modalImageIndex, setModalImageIndex] = useState(0)
     }
   }
 
-  const handleDelete = () => {
-    if (onDeleteVehicle && window.confirm(`Are you sure you want to delete "${vehicle.title}"?`)) {
-      onDeleteVehicle(vehicle.id)
+  const handleDelete = async () => {
+  if (onDeleteVehicle && window.confirm(`Are you sure you want to delete "${vehicle.title}"?`)) {
+    try {
+      // Delete from Firestore
+      await deleteDoc(doc(db, "vehicles", vehicle.id));
+      // Call parent callback
+      onDeleteVehicle(vehicle.id);
+    } catch (err) {
+      console.error("Failed to delete vehicle:", err);
+      alert("Failed to delete vehicle. Please try again.");
     }
   }
+};
+
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">

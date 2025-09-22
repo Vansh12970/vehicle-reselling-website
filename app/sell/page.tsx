@@ -16,6 +16,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, Car, Bike, Lock, Shield, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { collection, addDoc, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 interface Vehicle {
   id: string
@@ -83,20 +86,29 @@ export default function SellPage() {
     }
   }, [router])
 
-  const loadVehicles = () => {
-    const existingVehicles = localStorage.getItem("userVehicles")
-    if (existingVehicles) {
-      setVehicles(JSON.parse(existingVehicles))
-    }
+  const loadVehicles = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "vehicles"));
+    const vehiclesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Vehicle[];
+    setVehicles(vehiclesData);
+  } catch (err) {
+    console.error("Failed to load vehicles:", err);
   }
+};
 
-  const handleDeleteVehicle = (vehicleId: string) => {
-    if (confirm("Are you sure you want to delete this vehicle?")) {
-      const updatedVehicles = vehicles.filter((v) => v.id !== vehicleId)
-      setVehicles(updatedVehicles)
-      localStorage.setItem("userVehicles", JSON.stringify(updatedVehicles))
-    }
+
+  const handleDeleteVehicle = async (vehicleId: string) => {
+  if (!confirm("Are you sure you want to delete this vehicle?")) return;
+
+  try {
+    await deleteDoc(doc(db, "vehicles", vehicleId));
+    setVehicles(vehicles.filter(v => v.id !== vehicleId));
+  } catch (err) {
+    console.error("Failed to delete vehicle:", err);
+    alert("Failed to delete vehicle. Please try again.");
   }
+};
+
 
   const handleInputChange = (field: keyof VehicleFormData, value: string) => {
     setFormData((prev) => ({
@@ -113,57 +125,40 @@ export default function SellPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      // Create new vehicle object
-      const newVehicle = {
-        id: Date.now().toString(),
-        title: `${formData.year} ${formData.make} ${formData.model}`,
-        make: formData.make,
-        model: formData.model,
-        year: Number.parseInt(formData.year),
-        price: Number.parseInt(formData.price),
-        run: Number.parseInt(formData.run),
-        fuelType: formData.fuelType as "Petrol" | "Diesel" | "Electric" | "Hybrid",
-        color: formData.color,
-        location: formData.location,
-        images: formData.images.length > 0 ? formData.images : ["/placeholder.svg?height=300&width=400"],
-        type: formData.type,
-        description: formData.description,
-      }
+  try {
+    const newVehicle = {
+      title: `${formData.year} ${formData.make} ${formData.model}`,
+      make: formData.make,
+      model: formData.model,
+      year: Number(formData.year),
+      price: Number(formData.price),
+      run: Number(formData.run),
+      fuelType: formData.fuelType as "Petrol" | "Diesel" | "Electric" | "Hybrid",
+      color: formData.color,
+      location: formData.location,
+      images: formData.images.length > 0 ? formData.images : ["/placeholder.svg"],
+      type: formData.type,
+      description: formData.description,
+    };
 
-      // Add new vehicle
-      const updatedVehicles = [...vehicles, newVehicle]
-      setVehicles(updatedVehicles)
-      localStorage.setItem("userVehicles", JSON.stringify(updatedVehicles))
+    // Add to Firestore
+    const docRef = await addDoc(collection(db, "vehicles"), newVehicle);
+    setVehicles([...vehicles, { ...newVehicle, id: docRef.id }]);
 
-      // Show success message
-      alert("Vehicle added successfully!")
-
-      // Reset form and hide it
-      setFormData({
-        type: "car",
-        make: "",
-        model: "",
-        year: "",
-        run: "",
-        fuelType: "",
-        color: "",
-        price: "",
-        location: "",
-        description: "",
-        images: [],
-      })
-      setShowForm(false)
-    } catch (error) {
-      console.error("Error submitting vehicle:", error)
-      alert("Error adding vehicle. Please try again.")
-    } finally {
-      setIsSubmitting(false)
-    }
+    alert("Vehicle added successfully!");
+    setFormData({ type: "car", make: "", model: "", year: "", run: "", fuelType: "", color: "", price: "", location: "", description: "", images: [] });
+    setShowForm(false);
+  } catch (err) {
+    console.error("Failed to add vehicle:", err);
+    alert("Error adding vehicle. Please try again.");
+  } finally {
+    setIsSubmitting(false);
   }
+};
+
 
   if (!isLoggedIn || userType !== "admin") {
     return (

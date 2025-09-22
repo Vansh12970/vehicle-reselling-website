@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Mail, Phone, User } from "lucide-react"
+import emailjs from "@emailjs/browser"
 
 interface ContactSellerModalProps {
   isOpen: boolean
@@ -39,44 +40,40 @@ export function ContactSellerModal({ isOpen, onClose, vehicle }: ContactSellerMo
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  e.preventDefault()
+  setIsSubmitting(true)
 
-    try {
-      // Format the message for email
-      const subject = `Inquiry about ${vehicle?.title}`
-      const body = `Hi,
-
-I'm interested in your ${vehicle?.title} listed for ₹${vehicle?.price?.toLocaleString()}.
-
-Name: ${formData.name}
-Email: ${formData.email}
-Phone: ${formData.phone}
-
-Message:
-${formData.message}
-
-Please get back to me at your earliest convenience.
-
-Best regards,
-${formData.name}`
-
-      // Create mailto link
-      const mailtoLink = `mailto:vannshitt4188@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-
-      // Open email client
-      window.location.href = mailtoLink
-
-      // Reset form and close modal
-      setFormData({ name: "", email: "", phone: "", message: "" })
-      onClose()
-    } catch (error) {
-      console.error("Error sending message:", error)
-      alert("Error sending message. Please try again.")
-    } finally {
-      setIsSubmitting(false)
+  try {
+    // EmailJS code
+    const templateParams = {
+      from_name: formData.name,
+      from_email: formData.email,
+      phone: formData.phone,
+      message: formData.message,
+      vehicle_title: vehicle?.title,
+      vehicle_price: vehicle?.price,
+      vehicle_location: vehicle?.location,
     }
+
+    await emailjs.send(
+      "service_dttk5iy",    // replace with your EmailJS Service ID
+      "template_toyrizw",   // replace with your EmailJS Template ID
+      templateParams,
+      "W2htrPuUQeU7Blp0S"     // replace with your EmailJS Public Key
+    )
+
+    // Reset form and close modal
+    setFormData({ name: "", email: "", phone: "", message: "" })
+    onClose()
+    alert("Message sent successfully!")
+  } catch (error) {
+    console.error("Error sending message:", error)
+    alert("Error sending message. Please try again.")
+  } finally {
+    setIsSubmitting(false)
   }
+}
+
 
   const formatPrice = (price: number) => {
     if (price >= 10000000) {

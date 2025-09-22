@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react"
+import emailjs from "@emailjs/browser"
+
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -30,34 +32,36 @@ export default function ContactPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  e.preventDefault()
+  setIsSubmitting(true)
 
-    try {
-      // Create mailto link
-      const subject = formData.subject || "Contact Form Inquiry"
-      const body = `Name: ${formData.name}
-Email: ${formData.email}
-Phone: ${formData.phone}
-
-Message:
-${formData.message}`
-
-      const mailtoLink = `mailto:info@autohub.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-
-      // Open email client
-      window.location.href = mailtoLink
-
-      // Reset form
-      setFormData({ name: "", email: "", phone: "", subject: "", message: "" })
-      alert("Thank you for your message! We'll get back to you soon.")
-    } catch (error) {
-      console.error("Error sending message:", error)
-      alert("Error sending message. Please try again.")
-    } finally {
-      setIsSubmitting(false)
+  try {
+    // EmailJS code
+    const templateParams = {
+      from_name: formData.name,
+      from_email: formData.email,
+      phone: formData.phone,
+      subject: formData.subject,
+      message: formData.message,
     }
+
+    await emailjs.send(
+      "service_dttk5iy",    // replace with your EmailJS Service ID
+      "template_toyrizw",   // replace with your EmailJS Template ID
+      templateParams,
+      "W2htrPuUQeU7Blp0S"     // replace with your EmailJS Public Key
+    )
+
+    // Reset form
+    setFormData({ name: "", email: "", phone: "", subject: "", message: "" })
+    alert("Thank you for your message! We'll get back to you soon.")
+  } catch (error) {
+    console.error("Error sending message:", error)
+    alert("Error sending message. Please try again.")
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -84,8 +88,8 @@ ${formData.message}`
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-2">Send us an email anytime</p>
-                <a href="mailto:vannshitt4188@gmail.com" className="text-primary hover:underline font-medium">
-                  vannshitt4188@gmail.com
+                <a href="mailto:thakurdealings@gmail.com" className="text-primary hover:underline font-medium">
+                  thakurdealings@gmail.com
                 </a>
               </CardContent>
             </Card>
