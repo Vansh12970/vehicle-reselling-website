@@ -136,8 +136,21 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-border mt-8 pt-8 text-center">
+    {/* Bottom Bar */}
+        <div className="border-t border-border mt-8 pt-8 text-center space-y-2">
           <p className="text-sm text-muted-foreground">© 2024 Thakur Dealings. All rights reserved.</p>
+
+          <div className="flex items-center justify-center space-x-2 text-sm">
+            <User className="h-4 w-4 text-primary" />
+            <span>Developed by</span>
+            <a
+              href="https://www.linkedin.com/in/itsme-vansh"
+              target="_blank"
+              className="text-primary font-medium hover:underline"
+            >
+              Vansh Pratap Singh
+            </a>
+          </div>
         </div>
       </div>
     </footer>

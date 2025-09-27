@@ -21,31 +21,3 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-
-// ---------------- Admin helper ----------------
-// You can set a custom claim for admin users using Firebase Admin SDK
-// This code runs only in server-side Node.js, NOT in browser
-/*
-import admin from "firebase-admin";
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-  });
-}
-
-// Example: Set admin claim for a user
-const uid = "FIREBASE_USER_UID"; // get from Firebase Auth user UID
-admin.auth().setCustomUserClaims(uid, { admin: true })
-  .then(() => console.log("Admin claim set!"))
-  .catch(console.error);
-*/
-
-// ---------------- Usage Notes ----------------
-// 1. Use `auth.createUserWithEmailAndPassword(email, password)` for registration
-// 2. Use `auth.signInWithEmailAndPassword(email, password)` for login
-// 3. After login, you can check admin claim via custom token
-//    or store a flag in Firestore (e.g., /admins/{uid})
-// 4. For vehicle add/delete, use Firestore collection e.g., "vehicles"
-//    - Admins can add docs
-//    - Admins can delete docs

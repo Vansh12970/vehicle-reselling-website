@@ -13,33 +13,45 @@ import Image from "next/image"
 
 // Firebase imports
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
+import { doc, setDoc, getDoc } from "firebase/firestore"
 
 export default function LoginPage() {
   const [userType, setUserType] = useState<"user" | "admin">("user")
   const [email, setEmail] = useState("")
-  const [adminId, setAdminId] = useState("")
   const [password, setPassword] = useState("")
+  const [contact, setContact] = useState("")
+  const [adminId, setAdminId] = useState("") // Admin UID field
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false) // toggle register/login
+  const [isRegistering, setIsRegistering] = useState(false)
   const router = useRouter()
 
-  const ADMIN_ID = process.env.NEXT_PUBLIC_ADMIN_ID
-  const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD
-
   const handleUserRegister = async () => {
-    try {
-      await createUserWithEmailAndPassword(auth, email, password)
-      localStorage.setItem("isLoggedIn", "true")
-      localStorage.setItem("userType", "user")
-      router.push("/")
-    } catch (err: any) {
-      console.error(err)
-      setError(err.message || "Registration failed.")
-    }
+  try {
+    //console.log("Registering user with:", { email, password, contact })
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+    //console.log("User created successfully:", user.uid)
+
+    // Save user data in Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      email,
+      contact,
+      createdAt: new Date()
+    })
+    console.log("User data saved to Firestore")
+
+    localStorage.setItem("isLoggedIn", "true")
+    localStorage.setItem("userType", "user")
+    router.push("/")
+  } catch (err: any) {
+    console.error("Registration error:", err)
+    setError(err.message || "Registration failed.")
   }
+}
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,30 +59,34 @@ export default function LoginPage() {
     setError("")
 
     try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
       if (userType === "user") {
-        if (isRegistering) {
-          await handleUserRegister()
-        } else {
-          await signInWithEmailAndPassword(auth, email, password)
-          localStorage.setItem("isLoggedIn", "true")
-          localStorage.setItem("userType", "user")
-          router.push("/")
-        }
-      } else {
-        if (adminId === ADMIN_ID && password === ADMIN_PASSWORD) {
+        localStorage.setItem("isLoggedIn", "true")
+        localStorage.setItem("userType", "user")
+        router.push("/")
+        return
+      }
+
+      if (userType === "admin") {
+        const adminDoc = await getDoc(doc(db, "admins", user.uid))
+        if (adminDoc.exists()) {
           localStorage.setItem("isLoggedIn", "true")
           localStorage.setItem("userType", "admin")
           router.push("/sell")
         } else {
-          setError("Invalid Admin credentials.")
+          await auth.signOut()
+          setError("You are not authorized as admin.")
         }
       }
-    } catch (err) {
-      console.error(err)
-      setError("Login failed. Please check your credentials.")
-    }
 
-    setIsLoading(false)
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || "Login failed. Check your credentials.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -88,14 +104,28 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="thakur-branding text-primary">
-            {isRegistering ? "Register" : "Login"} to Thakur Dealings
+            {isRegistering && userType === "user" ? "Register" : "Login"} to Thakur Dealings
           </CardTitle>
           <CardDescription>
-            Choose account type and {isRegistering ? "register" : "login"}
+            Choose account type and {isRegistering && userType === "user" ? "register" : "login"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form
+  onSubmit={(e) => {
+    e.preventDefault()
+    console.log("Form submitted", { isRegistering, userType, email, password, contact })
+    if (isRegistering && userType === "user") {
+      console.log("Calling handleUserRegister")
+      handleUserRegister()
+    } else {
+      console.log("Calling handleLogin")
+      handleLogin(e)
+    }
+  }}
+  className="space-y-6"
+>
+            {/* Account Type */}
             <div className="space-y-3">
               <Label>Account Type</Label>
               <RadioGroup value={userType} onValueChange={(value) => setUserType(value as "user" | "admin")}>
@@ -122,31 +152,29 @@ export default function LoginPage() {
               </RadioGroup>
             </div>
 
-            {/* User Email */}
-            {userType === "user" && (
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-            )}
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
 
-            {/* Admin ID */}
-            {userType === "admin" && (
+            {/* Contact Number - only on registration */}
+            {isRegistering && userType === "user" && (
               <div className="space-y-2">
-                <Label htmlFor="adminId">Admin ID</Label>
+                <Label htmlFor="contact">Contact Number</Label>
                 <Input
-                  id="adminId"
-                  type="text"
-                  value={adminId}
-                  onChange={(e) => setAdminId(e.target.value)}
-                  placeholder="Enter Admin ID"
+                  id="contact"
+                  type="tel"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  placeholder="Enter your contact number"
                   required
                 />
               </div>
@@ -176,21 +204,21 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Error */}
             {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</div>}
 
             {/* Submit */}
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading
-                ? isRegistering
+                ? isRegistering && userType === "user"
                   ? "Registering..."
                   : "Logging in..."
-                : isRegistering
+                : isRegistering && userType === "user"
                 ? "Register"
                 : "Login"}
             </Button>
 
-            {/* Toggle Login/Register */}
+            {/* Register toggle (only for user) */}
             {userType === "user" && (
               <div className="text-sm text-center mt-2">
                 {isRegistering ? "Already have an account?" : "Don't have an account?"}{" "}

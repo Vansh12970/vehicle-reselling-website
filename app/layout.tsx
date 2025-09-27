@@ -7,9 +7,11 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "AutoHub - Buy & Sell Cars and Bikes",
+  title: "ThakurDealings - Buy & Sell Cars and Bikes",
   description: "Your trusted platform for buying and selling quality vehicles. Find your perfect car or bike today.",
-  generator: "v0.app",
+  icons: {
+    icon: "/favicon.png",
+  },
 }
 
 export default function RootLayout({

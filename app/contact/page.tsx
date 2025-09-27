@@ -243,8 +243,8 @@ export default function ContactPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Simply click on "Sell Vehicle" in the navigation, fill out the form with your vehicle details and
-                  photos, and your listing will be live immediately.
+                  Simply click on "Want to Sell" or "Contact Us" in the navigation, fill out the form with your vehicle details and
+                  photos, and your listing will be done in few minutes.
                 </p>
               </CardContent>
             </Card>
@@ -255,7 +255,7 @@ export default function ContactPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Yes! Listing your vehicle on AutoHub is completely free. We don't charge any listing fees or
+                  Yes! Listing your vehicle on Thakur Dealings is completely free. We don't charge any listing fees or
                   commissions.
                 </p>
               </CardContent>

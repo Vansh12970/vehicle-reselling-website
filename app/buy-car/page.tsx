@@ -6,8 +6,10 @@ import { Footer } from "@/components/footer"
 import { VehicleCard } from "@/components/vehicle-card"
 import { VehicleFilters } from "@/components/vehicle-filters"
 import { ContactSellerModal } from "@/components/contact-seller-modal"
-import { getAllVehicles, deleteUserVehicle } from "@/lib/sample-data"
 import { Car } from "lucide-react"
+import { doc, deleteDoc, collection, getDocs, setDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { getAuth } from "firebase/auth"
 
 interface FilterState {
   search: string
@@ -17,6 +19,26 @@ interface FilterState {
   yearMax: string
   fuelType: string
   make: string
+}
+
+interface VehicleImage {
+  url: string;
+  public_id: string;
+}
+
+interface Vehicle {
+  id: string;
+  title: string;
+  make: string;
+  model: string;
+  year: number;
+  price: number;
+  run: number;
+  fuelType: "Petrol" | "Diesel" | "Electric" | "Hybrid";
+  color: string;
+  location: string;
+  images: VehicleImage[];
+  vehicleType: "car" | "bike";
 }
 
 export default function BuyCarPage() {
@@ -30,80 +52,136 @@ export default function BuyCarPage() {
     make: "",
   })
 
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("favorites")
-      return saved ? JSON.parse(saved) : []
-    }
-    return []
-  })
-
-  const [allCars, setAllCars] = useState<any[]>([])
-  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [allCars, setAllCars] = useState<Vehicle[]>([])
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
 
+  const auth = getAuth()
+  const user = auth.currentUser
+
+  // Fetch vehicles
   useEffect(() => {
-    // Load all cars including user-added ones
-    const { cars } = getAllVehicles()
-    setAllCars(cars)
+    const fetchVehicles = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "vehicles"))
+        const vehiclesData = snapshot.docs.map(doc => {
+          const data = doc.data()
+          let images: VehicleImage[] = []
+          if (Array.isArray(data.images)) {
+            images = data.images.map((img: any) =>
+              typeof img === "string"
+                ? { url: img, public_id: "" }
+                : { url: img.url, public_id: img.public_id || "" }
+            )
+          }
+          return {
+            id: doc.id,
+            title: data.title || "",
+            make: data.make || "",
+            model: data.model || "",
+            year: data.year || 0,
+            price: data.price || 0,
+            run: data.run || 0,
+            fuelType: data.fuelType || "Petrol",
+            color: data.color || "",
+            location: data.location || "",
+            vehicleType: data.vehicleType || "car",
+            images,
+          } as Vehicle
+        })
+        const cars = vehiclesData.filter(v => v.vehicleType === "car")
+        setAllCars(cars)
+      } catch (err) {
+        console.error("Error fetching cars:", err)
+      }
+    }
+
+    fetchVehicles()
   }, [])
 
+  // Fetch user favorites from Firestore
+  useEffect(() => {
+    if (!user) return
+
+    const fetchFavorites = async () => {
+      try {
+        const favSnapshot = await getDocs(collection(db, "users", user.uid, "favorites"))
+        const favIds = favSnapshot.docs.map(doc => doc.id)
+        setFavorites(favIds)
+      } catch (err) {
+        console.error("Error fetching favorites:", err)
+      }
+    }
+
+    fetchFavorites()
+  }, [user])
+
+  // Filter cars
   const filteredCars = useMemo(() => {
     return allCars.filter((car) => {
-      // Search filter
       if (
         filters.search &&
         !car.title.toLowerCase().includes(filters.search.toLowerCase()) &&
         !car.make.toLowerCase().includes(filters.search.toLowerCase()) &&
         !car.model.toLowerCase().includes(filters.search.toLowerCase())
-      ) {
-        return false
-      }
+      ) return false
 
-      // Price filters
-      if (filters.priceMin && car.price < Number.parseInt(filters.priceMin)) return false
-      if (filters.priceMax && car.price > Number.parseInt(filters.priceMax)) return false
-
-      // Year filters
-      if (filters.yearMin && car.year < Number.parseInt(filters.yearMin)) return false
-      if (filters.yearMax && car.year > Number.parseInt(filters.yearMax)) return false
-
-      // Fuel type filter
+      if (filters.priceMin && car.price < Number(filters.priceMin)) return false
+      if (filters.priceMax && car.price > Number(filters.priceMax)) return false
+      if (filters.yearMin && car.year < Number(filters.yearMin)) return false
+      if (filters.yearMax && car.year > Number(filters.yearMax)) return false
       if (filters.fuelType && car.fuelType !== filters.fuelType) return false
-
-      // Make filter
       if (filters.make && car.make !== filters.make) return false
 
       return true
     })
   }, [filters, allCars])
 
-  const handleAddToFavorites = (vehicle: any) => {
-    const newFavorites = favorites.includes(vehicle.id)
-      ? favorites.filter((id) => id !== vehicle.id)
-      : [...favorites, vehicle.id]
+  // Add/remove favorite
+  const [isUpdatingFav, setIsUpdatingFav] = useState(false)
 
-    setFavorites(newFavorites)
-    localStorage.setItem("favorites", JSON.stringify(newFavorites))
+const handleAddToFavorites = async (vehicle: Vehicle) => {
+  if (!user) { alert("Please log in"); return }
+  if (isUpdatingFav) return
+
+  setIsUpdatingFav(true)
+  const userFavRef = doc(db, "users", user.uid, "favorites", vehicle.id)
+
+  try {
+    if (favorites.includes(vehicle.id)) {
+      setFavorites(prev => prev.filter(id => id !== vehicle.id))
+      await deleteDoc(userFavRef)
+    } else {
+      setFavorites(prev => [...prev, vehicle.id])
+      await setDoc(userFavRef, {
+        vehicleType: vehicle.vehicleType,
+        title: vehicle.title,
+        price: vehicle.price,
+        images: vehicle.images.map(img => img.url)
+      })
+    }
+  } catch (err) {
+    console.error(err)
+  } finally {
+    setIsUpdatingFav(false)
   }
+}
 
-  const handleContactSeller = (vehicle: any) => {
+
+  const handleContactSeller = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle)
     setIsContactModalOpen(true)
   }
 
-  const handleDeleteVehicle = (vehicleId: string) => {
-    // Only allow deletion of user-added vehicles (not sample data)
-    const userVehicles = JSON.parse(localStorage.getItem("userVehicles") || "[]")
-    const vehicleExists = userVehicles.some((v: any) => v.id === vehicleId)
-
-    if (vehicleExists) {
-      deleteUserVehicle(vehicleId)
-      // Refresh the cars list
-      const { cars } = getAllVehicles()
-      setAllCars(cars)
-    } else {
-      alert("Cannot delete sample vehicles. Only admin-added vehicles can be deleted.")
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    if(!confirm("Are you sure you want to delete this vehicle?")) return;
+    try {
+      await deleteDoc(doc(db, "vehicles", vehicleId))
+      setAllCars(prev => prev.filter(v => v.id !== vehicleId))
+    } catch(err) {
+      console.error(err)
+      alert("Failed to delete vehicle.")
     }
   }
 
@@ -167,7 +245,13 @@ export default function BuyCarPage() {
       <ContactSellerModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
-        vehicle={selectedVehicle}
+        vehicle={selectedVehicle ? {
+          id: selectedVehicle.id,
+          title: selectedVehicle.title,
+          price: selectedVehicle.price,
+          location: selectedVehicle.location,
+          images: selectedVehicle.images.map(img => img.url)
+        } : null}
       />
     </div>
   )

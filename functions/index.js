@@ -1,32 +1,70 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const functions = require("firebase-functions");
+const express = require("express");
+const cors = require("cors");
+const cloudinary = require("cloudinary").v2;
+require("dotenv").config();
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+// Express app
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json());
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+// Configure Cloudinary using .env variables
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+// ---------------------------
+// Cloudinary Sign Route
+// ---------------------------
+app.post("/cloudinary-sign", (req, res) => {
+  try {
+    const body = req.body || {};
+    const folder = body.folder || "vehicles";
+    const timestamp = Math.floor(Date.now() / 1000);
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+    if (!cloudinary.config().cloud_name || !cloudinary.config().api_key || !cloudinary.config().api_secret) {
+      return res.status(500).json({ error: "Missing Cloudinary environment variables" });
+    }
+
+    const signature = cloudinary.utils.api_sign_request({ timestamp, folder }, cloudinary.config().api_secret);
+
+    res.json({
+      signature,
+      timestamp,
+      folder,
+      cloudName: cloudinary.config().cloud_name,
+      apiKey: cloudinary.config().api_key,
+    });
+  } catch (err) {
+    console.error("Cloudinary signature error:", err);
+    res.status(500).json({ error: err.message || "Signature generation failed" });
+  }
+});
+
+// ---------------------------
+// Cloudinary Delete Route
+// ---------------------------
+app.post("/delete-image", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const public_id = body.public_id;
+
+    if (!public_id) {
+      return res.status(400).json({ error: "Missing public_id in request body" });
+    }
+
+    const result = await cloudinary.uploader.destroy(public_id);
+    res.json(result);
+  } catch (err) {
+    console.error("Cloudinary delete error:", err);
+    res.status(500).json({ error: err.message || "Delete failed" });
+  }
+});
+
+// ---------------------------
+// Export as Firebase Function
+// ---------------------------
+exports.api = functions.https.onRequest(app);

@@ -5,9 +5,12 @@ import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { VehicleCard } from "@/components/vehicle-card"
 import { ContactSellerModal } from "@/components/contact-seller-modal"
-import { sampleCars, sampleBikes } from "@/lib/sample-data"
 import { Heart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { getAuth } from "firebase/auth"
+import { db } from "@/lib/firebase"
+import { collection, doc, deleteDoc, getDocs } from "firebase/firestore"
+import { getDoc } from "firebase/firestore"
 
 export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<string[]>([])
@@ -15,36 +18,69 @@ export default function FavoritesPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
 
+  const auth = getAuth()
+  const user = auth.currentUser
+
+  // Fetch user's favorites from Firestore
   useEffect(() => {
-    // Load favorites from localStorage
-    const savedFavorites = localStorage.getItem("favorites")
-    if (savedFavorites) {
-      const favoriteIds = JSON.parse(savedFavorites)
-      setFavorites(favoriteIds)
+    if (!user) return
 
-      // Get the actual vehicle data for favorites
-      const allVehicles = [...sampleCars, ...sampleBikes]
-      const favoriteVehicleData = allVehicles.filter((vehicle) => favoriteIds.includes(vehicle.id))
-      setFavoriteVehicles(favoriteVehicleData)
+    const fetchFavorites = async () => {
+      try {
+        const favSnapshot = await getDocs(collection(db, "users", user.uid, "favorites"))
+        const favIds = favSnapshot.docs.map((doc) => doc.id)
+
+        const vehicles: any[] = []
+        for (const id of favIds) {
+          const vehicleDoc = await getDoc(doc(db, "vehicles", id))
+          if (vehicleDoc.exists()) {
+            vehicles.push({ id: vehicleDoc.id, ...vehicleDoc.data() })
+          }
+        }
+
+        setFavoriteVehicles(vehicles)
+      } catch (err) {
+        console.error("Error fetching favorites:", err)
+      }
     }
-  }, [])
 
-  const handleRemoveFromFavorites = (vehicle: any) => {
-    const newFavorites = favorites.filter((id) => id !== vehicle.id)
-    setFavorites(newFavorites)
-    setFavoriteVehicles(favoriteVehicles.filter((v) => v.id !== vehicle.id))
-    localStorage.setItem("favorites", JSON.stringify(newFavorites))
+    fetchFavorites()
+  }, [user])
+
+  // Remove a vehicle from favorites
+  const handleRemoveFromFavorites = async (vehicle: any) => {
+    if (!user) return
+    try {
+      const favRef = doc(db, "users", user.uid, "favorites", vehicle.id)
+      await deleteDoc(favRef)
+
+      const updatedFavorites = favorites.filter(id => id !== vehicle.id)
+      const updatedVehicles = favoriteVehicles.filter(v => v.id !== vehicle.id)
+      setFavorites(updatedFavorites)
+      setFavoriteVehicles(updatedVehicles)
+    } catch (err) {
+      console.error("Error removing favorite:", err)
+    }
+  }
+
+  // Clear all favorites
+  const clearAllFavorites = async () => {
+    if (!user) return
+    try {
+      for (const vehicle of favoriteVehicles) {
+        const favRef = doc(db, "users", user.uid, "favorites", vehicle.id)
+        await deleteDoc(favRef)
+      }
+      setFavorites([])
+      setFavoriteVehicles([])
+    } catch (err) {
+      console.error("Error clearing favorites:", err)
+    }
   }
 
   const handleContactSeller = (vehicle: any) => {
     setSelectedVehicle(vehicle)
     setIsContactModalOpen(true)
-  }
-
-  const clearAllFavorites = () => {
-    setFavorites([])
-    setFavoriteVehicles([])
-    localStorage.removeItem("favorites")
   }
 
   return (
@@ -103,7 +139,7 @@ export default function FavoritesPage() {
               <VehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}
-                onAddToFavorites={handleRemoveFromFavorites}
+                onAddToFavorites={handleRemoveFromFavorites} // removes from favorites
                 onContactSeller={handleContactSeller}
                 isFavorite={true}
               />

@@ -17,8 +17,13 @@ import { Plus, Car, Bike, Lock, Shield, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { collection, addDoc, getDocs, doc, deleteDoc } from "firebase/firestore";
+//import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { db } from "@/lib/firebase";
 
+interface ImageObj {
+  url: string
+  public_id: string
+}
 
 interface Vehicle {
   id: string
@@ -31,13 +36,13 @@ interface Vehicle {
   fuelType: "Petrol" | "Diesel" | "Electric" | "Hybrid"
   color: string
   location: string
-  images: string[]
-  type: "car" | "bike"
+  images: ImageObj[]
+  vehicleType: "car" | "bike"
   description?: string
 }
 
 interface VehicleFormData {
-  type: "car" | "bike"
+  vehicleType: "car" | "bike"
   make: string
   model: string
   year: string
@@ -47,7 +52,9 @@ interface VehicleFormData {
   price: string
   location: string
   description: string
-  images: string[]
+  images: ImageObj[]
+  imagesFiles: File[]
+  imagePreviews: string[] 
 }
 
 export default function SellPage() {
@@ -57,7 +64,7 @@ export default function SellPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState<VehicleFormData>({
-    type: "car",
+    vehicleType: "car",
     make: "",
     model: "",
     year: "",
@@ -67,7 +74,9 @@ export default function SellPage() {
     price: "",
     location: "",
     description: "",
-    images: [],
+    images: [] as ImageObj[],
+    imagesFiles: [],
+    imagePreviews: [],
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -97,12 +106,17 @@ export default function SellPage() {
 };
 
 
-  const handleDeleteVehicle = async (vehicleId: string) => {
+const handleDeleteVehicle = async (vehicleId: string) => {
   if (!confirm("Are you sure you want to delete this vehicle?")) return;
 
   try {
+    // Delete Firestore document
     await deleteDoc(doc(db, "vehicles", vehicleId));
-    setVehicles(vehicles.filter(v => v.id !== vehicleId));
+
+    // Update local state
+    setVehicles((prev) => prev.filter((v) => v.id !== vehicleId));
+
+    alert("Vehicle deleted successfully!");
   } catch (err) {
     console.error("Failed to delete vehicle:", err);
     alert("Failed to delete vehicle. Please try again.");
@@ -117,18 +131,49 @@ export default function SellPage() {
     }))
   }
 
-  const handleImagesChange = (images: string[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      images,
-    }))
+const handleImagesChange = (uploadedImages: ImageObj[]) => {
+  setFormData((prev) => ({
+    ...prev,
+    images: uploadedImages,      // store uploaded images with public_id
+    imagesFiles: [],             // no need for raw files anymore
+    imagePreviews: [],           // previews are optional now
+  }));
+};
+
+// Replace your current uploadImages with this:
+const uploadImages = async (files: File[]) => {
+  const uploaded: ImageObj[] = []
+
+  for (const file of files) {
+    const fd = new FormData()
+    fd.append("file", file)
+    fd.append("upload_preset", "thakur-deals") // unsigned preset
+    fd.append("folder", "vehicles")
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+      { method: "POST", body: fd }
+    )
+
+    if (!res.ok) throw new Error("Cloudinary upload failed")
+    const data = await res.json()
+    uploaded.push({ url: data.secure_url, public_id: data.public_id })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  return uploaded
+}
+
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setIsSubmitting(true);
 
   try {
+    if (formData.images.length === 0) {
+      alert("Please upload at least 1 image");
+      setIsSubmitting(false);
+      return;
+    }
+
     const newVehicle = {
       title: `${formData.year} ${formData.make} ${formData.model}`,
       make: formData.make,
@@ -139,17 +184,30 @@ export default function SellPage() {
       fuelType: formData.fuelType as "Petrol" | "Diesel" | "Electric" | "Hybrid",
       color: formData.color,
       location: formData.location,
-      images: formData.images.length > 0 ? formData.images : ["/placeholder.svg"],
-      type: formData.type,
+      images: formData.images, // already contains url + public_id
+      vehicleType: formData.vehicleType,
       description: formData.description,
     };
 
-    // Add to Firestore
     const docRef = await addDoc(collection(db, "vehicles"), newVehicle);
-    setVehicles([...vehicles, { ...newVehicle, id: docRef.id }]);
-
+    setVehicles(prev => [...prev, { id: docRef.id, ...newVehicle }]);
     alert("Vehicle added successfully!");
-    setFormData({ type: "car", make: "", model: "", year: "", run: "", fuelType: "", color: "", price: "", location: "", description: "", images: [] });
+
+    setFormData({ 
+      vehicleType: "car",
+      make: "",
+      model: "",
+      year: "",
+      run: "",
+      fuelType: "",
+      color: "",
+      price: "",
+      location: "",
+      description: "",
+      images: [],
+      imagesFiles: [],
+      imagePreviews: [],
+    });
     setShowForm(false);
   } catch (err) {
     console.error("Failed to add vehicle:", err);
@@ -217,20 +275,22 @@ export default function SellPage() {
     "Harley-Davidson",
   ]
 
-  const makes = formData.type === "car" ? carMakes : bikeMakes
+  const makes = formData.vehicleType === "car" ? carMakes : bikeMakes
 
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i)
 
-  const formatPrice = (price: number) => {
-    if (price >= 10000000) {
-      return `₹${(price / 10000000).toFixed(1)}Cr`
-    } else if (price >= 100000) {
-      return `₹${(price / 100000).toFixed(1)}L`
-    } else {
-      return `₹${price.toLocaleString()}`
-    }
+  const formatPrice = (price: number | string) => {
+  const numPrice = Number(price) || 0;
+  if (numPrice >= 10000000) {
+    return `₹${(numPrice / 10000000).toFixed(1)}Cr`
+  } else if (numPrice >= 100000) {
+    return `₹${(numPrice / 100000).toFixed(1)}L`
+  } else {
+    return `₹${numPrice.toLocaleString()}`
   }
+}
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -269,7 +329,7 @@ export default function SellPage() {
                   <Card key={vehicle.id} className="overflow-hidden">
                     <div className="relative h-48">
                       <Image
-                        src={vehicle.images[0] || "/placeholder.svg"}
+                        src={vehicle.images?.[0]?.url || "/placeholder.svg"}
                         alt={vehicle.title}
                         fill
                         className="object-cover"
@@ -313,8 +373,8 @@ export default function SellPage() {
                   </CardHeader>
                   <CardContent>
                     <RadioGroup
-                      value={formData.type}
-                      onValueChange={(value) => handleInputChange("type", value)}
+                      value={formData.vehicleType}
+                      onValueChange={(value) => handleInputChange("vehicleType", value)}
                       className="flex space-x-6"
                     >
                       <div className="flex items-center space-x-2">
@@ -490,7 +550,12 @@ export default function SellPage() {
                     <p className="text-sm text-muted-foreground">Upload 4-5 high-quality images of the vehicle</p>
                   </CardHeader>
                   <CardContent>
-                    <ImageUpload images={formData.images} onImagesChange={handleImagesChange} maxImages={5} />
+                   <ImageUpload 
+  images={formData.images} 
+  onImagesChange={handleImagesChange} 
+  maxImages={5} 
+/>
+
                   </CardContent>
                 </Card>
               </div>
