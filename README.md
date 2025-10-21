@@ -17,6 +17,11 @@ The project is hosted on **Firebase Hosting** with **Firestore** for real-time d
 
 ---
 
+## 🔗 Live Site
+Check out the deployed website here: [https://thakur-dealings.web.app](https://thakur-dealings.web.app)
+
+---
+
 ## 🛠 Features
 
 ### User Features
@@ -60,9 +65,5 @@ The project is hosted on **Firebase Hosting** with **Firestore** for real-time d
 
 ---
 
-## 🔗 Live Site
-Check out the deployed website here: [https://thakur-dealings.web.app](https://thakur-dealings.web.app)
-
----
 
 
