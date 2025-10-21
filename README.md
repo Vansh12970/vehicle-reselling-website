@@ -54,6 +54,6 @@ The project is hosted on **Firebase Hosting** with **Firestore** for real-time d
 ## 📸 Screenshots
 
 ```markdown
-![Homepage](assets/homepage.jpg)
+![Homepage](https://raw.githubusercontent.com/Vansh12970/vehicle-reselling-website/main/assets/homepage.jpg)
 ![Vehicle Listings](assets/car.jpg)
 ![Admin Section](assets/adminpage.jpg)
