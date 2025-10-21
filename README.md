@@ -54,6 +54,6 @@ The project is hosted on **Firebase Hosting** with **Firestore** for real-time d
 ## 📸 Screenshots
 
 ```markdown
-![Homepage](homepage.jpg)
-![Vehicle Listings](car.jpg)
-![Admin Section](adminpage.jpg)
+![Homepage](assets/homepage.jpg)
+![Vehicle Listings](assets/car.jpg)
+![Admin Section](assets/adminpage.jpg)
