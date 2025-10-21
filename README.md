@@ -1,30 +1,59 @@
-# Vehicle reselling website
+# 🚗 Thakur Dealings - Vehicle Reselling Platform
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+[![Live Site](https://img.shields.io/badge/Live-Site-blue?style=for-the-badge&logo=google-chrome)](https://thakur-dealings.web.app)
+[![React](https://img.shields.io/badge/React-17.0.2-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-13.4.0-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Backend-orange?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow?style=for-the-badge&logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/vansh12970s-projects/v0-vehicle-reselling-website)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/KpNaFU3tkWf)
+---
 
-## Overview
+## 🌟 Overview
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+**Thakur Dealings** is a modern vehicle reselling platform built with **React**, **Next.js**, and **Firebase**.  
+The platform allows users to buy and sell cars and bikes efficiently while providing admins full control over vehicle listings.  
 
-## Deployment
+The project is hosted on **Firebase Hosting** with **Firestore** for real-time data management.
 
-Your project is live at:
+---
 
-**[https://vercel.com/vansh12970s-projects/v0-vehicle-reselling-website](https://vercel.com/vansh12970s-projects/v0-vehicle-reselling-website)**
+## 🛠 Features
 
-## Build your app
+### User Features
+- Browse cars and bikes available for sale.
+- Contact owners directly to inquire or purchase a vehicle.
+- Reach out to Thakur Dealings to sell your own vehicle.
 
-Continue building your app on:
+### Admin Features
+- Add new car and bike listings with detailed specifications.
+- Update or remove vehicle listings.
+- Manage buyer and seller inquiries efficiently.
 
-**[https://v0.app/chat/projects/KpNaFU3tkWf](https://v0.app/chat/projects/KpNaFU3tkWf)**
+---
 
-## How It Works
+## 🖥 Technology Stack
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+| Layer | Technology |
+|-------|------------|
+| Frontend | React, Next.js, |
+| Backend & Hosting | Firebase Hosting |
+| Database | Firebase Firestore |
+| Deployment | Firebase `.web.app` domain with HTTPS |
+
+---
+
+## ⚙ How It Works
+1. **Admin adds vehicles**: Admin inputs cars and bikes into Firestore with relevant details.
+2. **Users browse listings**: Users can view all available vehicles.
+3. **Contact owners**: Users contact vehicle owners directly to buy.
+4. **Sell vehicles**: Users contact Thakur Dealings to list their vehicles.
+5. **Admin manages**: Admin reviews and updates listings and inquiries in real-time.
+
+---
+
+## 📸 Screenshots
+
+```markdown
+![Homepage](homepage.jpg)
+![Vehicle Listings](car.jpg)
+![Admin Section](adminpage.jpg)
