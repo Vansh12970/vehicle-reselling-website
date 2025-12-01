@@ -1,4 +1,4 @@
-# 🚗 Thakur Dealings - Vehicle Reselling Platform
+# Thakur Dealings - Vehicle Reselling Platform
 
 [![Live Site](https://img.shields.io/badge/Live-Site-blue?style=for-the-badge&logo=google-chrome)](https://thakur-dealings.web.app)
 [![React](https://img.shields.io/badge/React-17.0.2-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
@@ -8,7 +8,7 @@
 
 ---
 
-## 🌟 Overview
+##  Overview
 
 **Thakur Dealings** is a modern vehicle reselling platform built with **React**, **Next.js**, and **Firebase**.  
 The platform allows users to buy and sell cars and bikes efficiently while providing admins full control over vehicle listings.  
@@ -17,12 +17,12 @@ The project is hosted on **Firebase Hosting** with **Firestore** for real-time d
 
 ---
 
-## 🔗 Live Site
+##  Live Site
 Check out the deployed website here: [https://thakur-dealings.web.app](https://thakur-dealings.web.app)
 
 ---
 
-## 🛠 Features
+##  Features
 
 ### User Features
 - Browse cars and bikes available for sale.
@@ -36,7 +36,7 @@ Check out the deployed website here: [https://thakur-dealings.web.app](https://t
 
 ---
 
-## 🖥 Technology Stack
+##  Technology Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -47,7 +47,7 @@ Check out the deployed website here: [https://thakur-dealings.web.app](https://t
 
 ---
 
-## ⚙ How It Works
+##  How It Works
 1. **Admin adds vehicles**: Admin inputs cars and bikes into Firestore with relevant details.
 2. **Users browse listings**: Users can view all available vehicles.
 3. **Contact owners**: Users contact vehicle owners directly to buy.
@@ -56,7 +56,7 @@ Check out the deployed website here: [https://thakur-dealings.web.app](https://t
 
 ---
 
-## 📸 Screenshots
+##  Screenshots
 
 <img src="./assets/homepage.jpg" width="400" style="border-radius: 10px;" alt="Homepage"/>
 <img src="./assets/car.jpg" width="400" style="border-radius: 10px;" alt="Vehicle Listings"/>
